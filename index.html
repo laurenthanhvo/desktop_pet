@@ -3,9 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cute CV Pet Mockup</title>
+  <title>Teachable CV Pixel Pet</title>
 
-  <!-- MediaPipe Hands -->
+  <!--
+    This is a single-file version you can deploy directly to GitHub Pages.
+    It uses MediaPipe's pretrained hand-tracking model through CDN scripts.
+    The ML layer below is local-only: few-shot gesture examples are stored in localStorage.
+  -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 
@@ -20,11 +24,12 @@
       --blue: #b6e9ff;
       --green: #bdf7d2;
       --shadow: rgba(44, 24, 74, 0.18);
+      --good: #92f0b5;
+      --warn: #ffe08a;
+      --bad: #ff99b9;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -36,33 +41,28 @@
         linear-gradient(135deg, #fff8fd, #edfaff);
       display: flex;
       justify-content: center;
-      align-items: center;
+      align-items: flex-start;
       padding: 24px;
     }
 
-    button,
-    select,
-    input {
-      font-family: inherit;
-    }
+    button, select, input { font-family: inherit; }
 
     .app {
-      width: min(1180px, 100%);
+      width: min(1280px, 100%);
       display: grid;
-      grid-template-columns: minmax(380px, 720px) 360px;
+      grid-template-columns: minmax(420px, 760px) minmax(340px, 430px);
       gap: 22px;
       align-items: start;
     }
 
-    .pet-window,
-    .side-panel {
+    .pet-window, .side-panel {
       border: 3px solid var(--ink);
       background: var(--panel);
       box-shadow: 8px 8px 0 var(--shadow);
     }
 
     .titlebar {
-      height: 36px;
+      min-height: 36px;
       background: var(--pink);
       border-bottom: 3px solid var(--ink);
       display: flex;
@@ -70,13 +70,12 @@
       justify-content: space-between;
       padding: 0 10px;
       font-weight: 700;
+      gap: 10px;
     }
 
-    .window-buttons {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
+    .titlebar small { font-weight: 700; opacity: .7; }
+
+    .window-buttons { display: flex; gap: 8px; align-items: center; }
 
     .fake-btn {
       width: 12px;
@@ -89,7 +88,7 @@
 
     .scene {
       position: relative;
-      height: 420px;
+      height: 440px;
       overflow: hidden;
       image-rendering: pixelated;
       border-bottom: 3px solid var(--ink);
@@ -170,8 +169,7 @@
     }
 
     .scene[data-bg="bath"] {
-      background:
-        linear-gradient(#b7f3ff 0 55%, #e8fbff 55% 100%);
+      background: linear-gradient(#b7f3ff 0 55%, #e8fbff 55% 100%);
     }
 
     .scene[data-bg="bath"]::before {
@@ -185,13 +183,14 @@
       position: absolute;
       top: 18px;
       left: 18px;
-      max-width: 310px;
+      max-width: 360px;
       background: #fff9fd;
       border: 3px solid var(--ink);
       padding: 10px 12px;
       box-shadow: 4px 4px 0 var(--shadow);
       font-size: 14px;
       z-index: 4;
+      line-height: 1.35;
     }
 
     .speech::after {
@@ -216,6 +215,7 @@
       transform: translateX(-50%);
       transform-origin: 50% 82%;
       z-index: 3;
+      will-change: left, transform;
     }
 
     #petCanvas {
@@ -224,33 +224,15 @@
       image-rendering: pixelated;
     }
 
-    .pet-wrapper.idle {
-      animation: idle-bob 1.7s steps(2) infinite;
-    }
-
-    .pet-wrapper.happy {
-      animation: happy-bounce 0.55s steps(2) infinite;
-    }
-
-    .pet-wrapper.eat {
-      animation: eat-bob 0.32s steps(2) infinite;
-    }
-
-    .pet-wrapper.jump {
-      animation: jump 0.82s cubic-bezier(.2,.9,.2,1);
-    }
-
-    .pet-wrapper.roll {
-      animation: roll 1s ease-in-out;
-    }
-
-    .pet-wrapper.confused {
-      animation: shake 0.45s steps(3) 3;
-    }
-
-    .pet-wrapper.sleep {
-      animation: sleep-breathe 2.2s steps(2) infinite;
-    }
+    .pet-wrapper.idle { animation: idle-bob 1.7s steps(2) infinite; }
+    .pet-wrapper.happy { animation: happy-bounce 0.55s steps(2) infinite; }
+    .pet-wrapper.eat { animation: eat-bob 0.32s steps(2) infinite; }
+    .pet-wrapper.jump { animation: jump 0.82s cubic-bezier(.2,.9,.2,1); }
+    .pet-wrapper.roll { animation: roll 1s ease-in-out; }
+    .pet-wrapper.confused { animation: shake 0.45s steps(3) 3; }
+    .pet-wrapper.sleep { animation: sleep-breathe 2.2s steps(2) infinite; }
+    .pet-wrapper.ask_food { animation: hungry-hop 0.9s steps(3) infinite; }
+    .pet-wrapper.ask_play { animation: happy-bounce 0.75s steps(2) infinite; }
 
     @keyframes idle-bob {
       0%, 100% { transform: translateX(-50%) translateY(0); }
@@ -260,6 +242,12 @@
     @keyframes happy-bounce {
       0%, 100% { transform: translateX(-50%) translateY(0) scale(1); }
       50% { transform: translateX(-50%) translateY(-8px) scale(1.03, .97); }
+    }
+
+    @keyframes hungry-hop {
+      0%, 100% { transform: translateX(-50%) translateY(0) rotate(0); }
+      30% { transform: translateX(-50%) translateY(-8px) rotate(-5deg); }
+      70% { transform: translateX(-50%) translateY(-4px) rotate(5deg); }
     }
 
     @keyframes eat-bob {
@@ -302,14 +290,11 @@
 
     .stats {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(6, 1fr);
       gap: 10px;
     }
 
-    .stat {
-      font-size: 12px;
-      font-weight: 700;
-    }
+    .stat { font-size: 12px; font-weight: 700; }
 
     .bar {
       height: 14px;
@@ -324,12 +309,14 @@
       height: 100%;
       width: 50%;
       background: linear-gradient(90deg, #ff9aca, #ffe08a);
+      transition: width .2s ease;
     }
 
-    .controls {
+    .controls, .small-row {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      align-items: center;
     }
 
     .pixel-btn {
@@ -340,7 +327,13 @@
       padding: 8px 10px;
       box-shadow: 3px 3px 0 var(--shadow);
       cursor: pointer;
+      user-select: none;
     }
+
+    .pixel-btn.alt { background: #dff7ff; }
+    .pixel-btn.good { background: #d7ffd9; }
+    .pixel-btn.bad { background: #ffd6e6; }
+    .pixel-btn.tiny { padding: 5px 7px; font-size: 11px; border-width: 2px; }
 
     .pixel-btn:hover {
       transform: translate(-1px, -1px);
@@ -352,15 +345,8 @@
       box-shadow: 1px 1px 0 var(--shadow);
     }
 
-    .side-panel {
-      background: #fffafd;
-    }
-
-    .side-content {
-      padding: 14px;
-      display: grid;
-      gap: 14px;
-    }
+    .side-panel { background: #fffafd; }
+    .side-content { padding: 14px; display: grid; gap: 14px; }
 
     .card {
       border: 3px solid var(--ink);
@@ -372,7 +358,13 @@
     .card h3 {
       margin: 0 0 8px;
       font-size: 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: baseline;
     }
+
+    .card h3 span { font-size: 11px; opacity: .75; font-weight: 700; }
 
     .camera-wrap {
       position: relative;
@@ -390,24 +382,17 @@
       transform: scaleX(1);
     }
 
-    .camera-status {
+    .camera-status, .log, .metric-box {
       font-size: 12px;
       line-height: 1.5;
-      margin-top: 8px;
       background: #fff4d8;
       border: 2px solid var(--ink);
       padding: 8px;
     }
 
-    .small-row {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
+    .log { background: #f7fbff; min-height: 48px; }
 
-    select,
-    input {
+    select, input[type="text"], input[type="number"] {
       border: 3px solid var(--ink);
       background: #fff;
       color: var(--ink);
@@ -415,6 +400,8 @@
       font-weight: 700;
       min-width: 110px;
     }
+
+    input[type="range"] { accent-color: var(--pink-dark); width: 140px; }
 
     .instructions {
       font-size: 12px;
@@ -443,21 +430,18 @@
       100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
     }
 
-    .food {
+    .food, .held-food {
       position: absolute;
-      left: 50%;
-      top: 40px;
       z-index: 6;
       width: 34px;
       height: 34px;
       border: 3px solid var(--ink);
       background: #ffdc79;
-      transform: translateX(-50%);
-      animation: fall-food 0.9s ease-in forwards;
+      transform: translate(-50%, -50%);
       box-shadow: 3px 3px 0 var(--shadow);
     }
 
-    .food::before {
+    .food::before, .held-food::before {
       content: "";
       position: absolute;
       width: 8px;
@@ -465,34 +449,100 @@
       background: #ff7aa8;
       left: 6px;
       top: 7px;
-      box-shadow:
-        12px 4px 0 #ff7aa8,
-        7px 16px 0 #ff7aa8;
+      box-shadow: 12px 4px 0 #ff7aa8, 7px 16px 0 #ff7aa8;
     }
+
+    .food { left: 50%; top: 40px; animation: fall-food 0.9s ease-in forwards; }
 
     @keyframes fall-food {
       0% { top: 40px; opacity: 1; }
-      80% { top: 260px; opacity: 1; }
-      100% { top: 280px; opacity: 0; }
+      80% { top: 280px; opacity: 1; }
+      100% { top: 310px; opacity: 0; }
     }
 
-    .log {
-      min-height: 42px;
-      font-size: 12px;
-      line-height: 1.45;
-      background: #f7fbff;
+    .held-food { pointer-events: none; }
+
+    .confidence-grid {
+      display: grid;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .conf-row {
+      display: grid;
+      grid-template-columns: 62px 1fr 42px;
+      gap: 6px;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .conf-track {
+      height: 12px;
       border: 2px solid var(--ink);
+      background: #fff;
+      padding: 1px;
+    }
+
+    .conf-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #b6e9ff, #ffc1e1);
+      width: 0%;
+    }
+
+    .pill-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .pill {
+      border: 2px solid var(--ink);
+      background: #fff7fd;
+      padding: 4px 6px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .recording-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border: 2px solid var(--ink);
+      background: var(--bad);
+      margin-right: 6px;
+      animation: blink-record 0.45s steps(2) infinite;
+      vertical-align: -1px;
+    }
+
+    @keyframes blink-record { 50% { opacity: .2; } }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .code-note {
+      font-size: 11px;
+      line-height: 1.45;
+      background: #fff9f0;
+      border: 2px dashed var(--ink);
       padding: 8px;
     }
 
-    @media (max-width: 900px) {
-      .app {
-        grid-template-columns: 1fr;
-      }
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      .scene { height: 390px; }
+      .stats { grid-template-columns: repeat(3, 1fr); }
+    }
 
-      .scene {
-        height: 360px;
-      }
+    @media (max-width: 560px) {
+      body { padding: 12px; }
+      .scene { height: 350px; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
@@ -506,11 +556,11 @@
           <span class="fake-btn">□</span>
           <span class="fake-btn">−</span>
         </div>
-        <div>mochi.pet</div>
+        <div>mochi.pet <small>teachable ML edition</small></div>
       </div>
 
       <div id="scene" class="scene" data-bg="meadow">
-        <div id="speech" class="speech">Hi, I’m Mochi! Turn on the camera and try an open palm, pinch, wave, or upward swipe.</div>
+        <div id="speech" class="speech">Hi, I’m Mochi. Turn on the camera, record a few gesture examples, and I’ll learn your custom tricks.</div>
         <div id="particleLayer" class="particle-layer"></div>
 
         <div id="petWrapper" class="pet-wrapper idle">
@@ -520,18 +570,12 @@
 
       <div class="bottom-bar">
         <div class="stats">
-          <div class="stat">Hunger
-            <div class="bar"><span id="hungerBar"></span></div>
-          </div>
-          <div class="stat">Happy
-            <div class="bar"><span id="happyBar"></span></div>
-          </div>
-          <div class="stat">Energy
-            <div class="bar"><span id="energyBar"></span></div>
-          </div>
-          <div class="stat">Trick XP
-            <div class="bar"><span id="xpBar"></span></div>
-          </div>
+          <div class="stat">Hunger<div class="bar"><span id="hungerBar"></span></div></div>
+          <div class="stat">Happy<div class="bar"><span id="happyBar"></span></div></div>
+          <div class="stat">Energy<div class="bar"><span id="energyBar"></span></div></div>
+          <div class="stat">Trust<div class="bar"><span id="trustBar"></span></div></div>
+          <div class="stat">Boredom<div class="bar"><span id="boredomBar"></span></div></div>
+          <div class="stat">Trick XP<div class="bar"><span id="xpBar"></span></div></div>
         </div>
 
         <div class="controls">
@@ -539,15 +583,16 @@
           <button class="pixel-btn" id="petBtn">Pet</button>
           <button class="pixel-btn" id="jumpBtn">Jump</button>
           <button class="pixel-btn" id="rollBtn">Roll</button>
+          <button class="pixel-btn" id="waveBtn">Wave</button>
           <button class="pixel-btn" id="sleepBtn">Sleep</button>
-          <button class="pixel-btn" id="bgBtn">Change Background</button>
+          <button class="pixel-btn alt" id="bgBtn">Change Background</button>
         </div>
       </div>
     </section>
 
     <aside class="side-panel">
       <div class="titlebar">
-        <div>camera + tricks</div>
+        <div>camera + local ML</div>
         <div class="window-buttons">
           <span class="fake-btn">×</span>
           <span class="fake-btn">□</span>
@@ -557,51 +602,98 @@
 
       <div class="side-content">
         <div class="card">
-          <h3>Camera</h3>
+          <h3>Camera <span>MediaPipe landmarks</span></h3>
           <div class="camera-wrap">
-            <video id="video" playsinline style="display: none;"></video>
+            <video id="video" playsinline style="display:none;"></video>
             <canvas id="cameraCanvas" width="320" height="240"></canvas>
           </div>
-
-          <div class="small-row" style="margin-top: 10px;">
+          <div class="small-row" style="margin-top:10px;">
             <button class="pixel-btn" id="startCameraBtn">Start Camera</button>
-            <button class="pixel-btn" id="stopCameraBtn">Stop</button>
+            <button class="pixel-btn bad" id="stopCameraBtn">Stop</button>
           </div>
-
-          <div class="camera-status" id="cameraStatus">
-            Camera off. Manual buttons still work.
-          </div>
+          <div class="camera-status" id="cameraStatus">Camera off. Manual buttons still work. Use localhost or HTTPS for camera permission.</div>
         </div>
 
         <div class="card">
-          <h3>Teach a Trick</h3>
+          <h3>Few-Shot Gesture Trainer <span>DTW + prototype kNN</span></h3>
           <div class="small-row">
-            <select id="trickSelect">
-              <option value="jump">Jump: upward swipe</option>
-              <option value="roll">Roll: circle motion</option>
-              <option value="wave">Wave: left-right wave</option>
+            <select id="learnActionSelect">
+              <option value="jump">Jump</option>
+              <option value="roll">Roll</option>
+              <option value="wave">Wave</option>
+              <option value="feed">Feed</option>
+              <option value="pet">Pet</option>
+              <option value="sleep">Sleep</option>
             </select>
-            <button class="pixel-btn" id="trainBtn">Start</button>
+            <button class="pixel-btn good" id="recordExampleBtn">Record Example</button>
+            <button class="pixel-btn bad" id="clearExamplesBtn">Clear Examples</button>
           </div>
-          <div class="log" id="trainingLog">Pick a trick, press Start, then perform the gesture.</div>
+          <div class="small-row" style="margin-top:8px;">
+            <label style="font-size:12px;font-weight:700;">Confidence threshold</label>
+            <input id="thresholdSlider" type="range" min="35" max="90" value="68" />
+            <span class="pill" id="thresholdValue">0.68</span>
+          </div>
+          <div class="log" id="trainerLog">Record 3–5 examples per action. Each example stores only normalized hand-landmark trajectories, not camera images.</div>
+          <div class="pill-grid" id="exampleCounts"></div>
         </div>
 
         <div class="card">
-          <h3>Gestures</h3>
+          <h3>Live Gesture Model <span>confidence + uncertainty</span></h3>
+          <div class="metric-box" id="modelStatus">No learned examples yet. Use the trainer above.</div>
+          <div class="confidence-grid" id="confidenceGrid"></div>
+          <div class="small-row" style="margin-top:10px;">
+            <select id="feedbackLabelSelect">
+              <option value="jump">Correct as Jump</option>
+              <option value="roll">Correct as Roll</option>
+              <option value="wave">Correct as Wave</option>
+              <option value="feed">Correct as Feed</option>
+              <option value="pet">Correct as Pet</option>
+              <option value="sleep">Correct as Sleep</option>
+            </select>
+            <button class="pixel-btn good" id="addFeedbackBtn">Add Last Gesture</button>
+          </div>
+          <div class="small-row" style="margin-top:8px;">
+            <button class="pixel-btn tiny" id="exportModelBtn">Export JSON</button>
+            <button class="pixel-btn tiny" id="importModelBtn">Import JSON</button>
+            <input id="importModelInput" type="file" accept="application/json" style="display:none;" />
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Pet Brain <span>contextual bandit</span></h3>
+          <div class="metric-box" id="brainStatus">Policy warming up. Mochi will autonomously choose whether to ask for food, play, nap, or idle.</div>
+          <div class="small-row" style="margin-top:8px;">
+            <button class="pixel-btn tiny" id="resetBrainBtn">Reset Brain</button>
+            <button class="pixel-btn tiny" id="brainStepBtn">Force Brain Step</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Gesture Fallbacks <span>rule-based backup</span></h3>
           <ul class="instructions">
-            <li><b>Open palm</b> = pet Mochi</li>
-            <li><b>Pinch</b> = feed Mochi</li>
-            <li><b>Swipe upward</b> = jump</li>
-            <li><b>Circle with finger</b> = roll</li>
-            <li><b>Wave left/right</b> = happy trick</li>
-            <li><b>Fist</b> = confused</li>
+            <li><b>Pinch + drag</b> = hold food; release near Mochi to feed.</li>
+            <li><b>Open palm near pet</b> = pet Mochi.</li>
+            <li><b>Upward swipe</b> = jump.</li>
+            <li><b>Circle with finger</b> = roll.</li>
+            <li><b>Wave left/right</b> = wave / happy.</li>
+            <li><b>Fist</b> = confused / unknown.</li>
           </ul>
+        </div>
+
+        <div class="card">
+          <h3>What is technical here?</h3>
+          <div class="code-note">
+            Camera frames are converted into 21 hand landmarks by MediaPipe. This app normalizes the hand pose, records temporal trajectories, resamples them to a fixed length, classifies gestures with Dynamic Time Warping and kNN-style prototypes, handles uncertainty with confidence thresholds, accepts active-learning feedback, and uses a tiny contextual-bandit policy for autonomous pet behavior.
+          </div>
         </div>
       </div>
     </aside>
   </main>
 
   <script>
+    // =============================================================
+    // DOM references
+    // =============================================================
     const petCanvas = document.getElementById("petCanvas");
     const petCtx = petCanvas.getContext("2d");
     const petWrapper = document.getElementById("petWrapper");
@@ -612,46 +704,155 @@
     const hungerBar = document.getElementById("hungerBar");
     const happyBar = document.getElementById("happyBar");
     const energyBar = document.getElementById("energyBar");
+    const trustBar = document.getElementById("trustBar");
+    const boredomBar = document.getElementById("boredomBar");
     const xpBar = document.getElementById("xpBar");
 
     const video = document.getElementById("video");
     const cameraCanvas = document.getElementById("cameraCanvas");
     const cameraCtx = cameraCanvas.getContext("2d");
     const cameraStatus = document.getElementById("cameraStatus");
-    const trainingLog = document.getElementById("trainingLog");
+    const trainerLog = document.getElementById("trainerLog");
+    const modelStatus = document.getElementById("modelStatus");
+    const confidenceGrid = document.getElementById("confidenceGrid");
+    const exampleCounts = document.getElementById("exampleCounts");
+    const thresholdSlider = document.getElementById("thresholdSlider");
+    const thresholdValue = document.getElementById("thresholdValue");
+    const learnActionSelect = document.getElementById("learnActionSelect");
+    const feedbackLabelSelect = document.getElementById("feedbackLabelSelect");
+    const brainStatus = document.getElementById("brainStatus");
 
+    // =============================================================
+    // Global state
+    // =============================================================
+    const ACTIONS = ["jump", "roll", "wave", "feed", "pet", "sleep"];
     const backgrounds = ["meadow", "desert", "forest", "sunset", "hills", "bath"];
     let bgIndex = 0;
 
     let petState = "idle";
     let stateTimer = null;
+    let petSceneX = 50;
+    let petTargetX = 50;
+    let lastHandSeenAt = 0;
+    let handNearPet = false;
+    let lookDir = 1;
 
-    let stats = {
+    let stats = loadJSON("mochi_stats_v2", {
       hunger: 72,
       happiness: 76,
       energy: 88,
+      trust: 38,
+      boredom: 22,
       xp: 8
-    };
+    });
 
     let camera = null;
     let hands = null;
     let motionHistory = [];
+    let rawFeatureBuffer = [];
     let lastGestureTimes = {};
+    let lastPrediction = null;
+    let lastGestureSequenceForFeedback = null;
 
-    let training = {
+    let learnedExamples = loadJSON("mochi_gesture_examples_v2", emptyExamples());
+
+    let recording = {
       active: false,
-      trick: "jump"
+      action: null,
+      startedAt: 0,
+      durationMs: 1500,
+      frames: []
     };
 
+    let foodDrag = {
+      active: false,
+      el: null,
+      x: 0,
+      y: 0,
+      startedAt: 0
+    };
+
+    // Contextual bandit policy for autonomous pet behavior.
+    const BRAIN_ACTIONS = ["ask_food", "ask_play", "nap", "idle"];
+    let brain = loadJSON("mochi_bandit_brain_v1", makeFreshBrain());
+    let lastBrainDecision = null;
+
+    function emptyExamples() {
+      return ACTIONS.reduce((acc, action) => {
+        acc[action] = [];
+        return acc;
+      }, {});
+    }
+
+    function makeFreshBrain() {
+      const weights = {};
+      BRAIN_ACTIONS.forEach(action => {
+        // Feature vector: [bias, hungerNeed, boredom, lowEnergy, handNearby, trust]
+        weights[action] = [0, 0, 0, 0, 0, 0];
+      });
+      weights.ask_food = [0.2, 0.8, 0.0, -0.1, 0.2, 0.1];
+      weights.ask_play = [0.1, -0.1, 0.8, 0.0, 0.4, 0.2];
+      weights.nap = [0.0, 0.0, -0.1, 0.9, -0.1, 0.0];
+      weights.idle = [0.1, -0.2, -0.2, -0.2, 0.0, 0.1];
+      return { weights, epsilon: 0.15, lr: 0.08, lastReward: 0, steps: 0 };
+    }
+
+    // =============================================================
+    // Utility functions
+    // =============================================================
     function clamp(value, min = 0, max = 100) {
       return Math.max(min, Math.min(max, value));
     }
 
+    function loadJSON(key, fallback) {
+      try {
+        const text = localStorage.getItem(key);
+        return text ? JSON.parse(text) : fallback;
+      } catch (err) {
+        console.warn("localStorage parse failed", key, err);
+        return fallback;
+      }
+    }
+
+    function saveJSON(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); }
+      catch (err) { console.warn("localStorage save failed", key, err); }
+    }
+
+    function distance(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const dz = (a.z || 0) - (b.z || 0);
+      return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    function mean(values) {
+      if (!values.length) return 0;
+      return values.reduce((a, b) => a + b, 0) / values.length;
+    }
+
+    function dot(a, b) {
+      let s = 0;
+      for (let i = 0; i < a.length; i++) s += a[i] * b[i];
+      return s;
+    }
+
     function updateStats() {
+      stats.hunger = clamp(stats.hunger);
+      stats.happiness = clamp(stats.happiness);
+      stats.energy = clamp(stats.energy);
+      stats.trust = clamp(stats.trust);
+      stats.boredom = clamp(stats.boredom);
+      stats.xp = clamp(stats.xp);
+
       hungerBar.style.width = `${stats.hunger}%`;
       happyBar.style.width = `${stats.happiness}%`;
       energyBar.style.width = `${stats.energy}%`;
+      trustBar.style.width = `${stats.trust}%`;
+      boredomBar.style.width = `${stats.boredom}%`;
       xpBar.style.width = `${stats.xp}%`;
+
+      saveJSON("mochi_stats_v2", stats);
     }
 
     function say(text) {
@@ -677,77 +878,91 @@
       const symbols = {
         heart: ["♡", "♥", "💕"],
         sparkle: ["✦", "✧", "★"],
-        confuse: ["?", "?!", "…"]
+        confuse: ["?", "?!", "…"],
+        brain: ["+", "↑", "ML"],
+        food: ["●", "◆", "✿"]
       };
 
       for (let i = 0; i < count; i++) {
         const el = document.createElement("div");
         el.className = "particle";
         el.textContent = symbols[kind][Math.floor(Math.random() * symbols[kind].length)];
-        el.style.left = `${45 + Math.random() * 16}%`;
+        el.style.left = `${petSceneX - 6 + Math.random() * 16}%`;
         el.style.top = `${54 + Math.random() * 10}%`;
-        el.style.color = kind === "confuse" ? "#7f6abf" : kind === "sparkle" ? "#ffd45c" : "#ff70ad";
+        el.style.color = kind === "confuse" ? "#7f6abf" : kind === "sparkle" ? "#ffd45c" : kind === "brain" ? "#66b6ff" : "#ff70ad";
         particleLayer.appendChild(el);
-
         setTimeout(() => el.remove(), 1400);
       }
     }
 
-    function spawnFood() {
+    function spawnFoodFall(xPct = 50) {
       const food = document.createElement("div");
       food.className = "food";
+      food.style.left = `${xPct}%`;
       scene.appendChild(food);
       setTimeout(() => food.remove(), 1000);
     }
 
-    function checkTraining(action) {
-      if (!training.active) return false;
-
-      const expected = {
-        jump: "jump",
-        roll: "roll",
-        wave: "wave"
-      }[training.trick];
-
-      if (action === expected) {
-        training.active = false;
-        stats.xp = clamp(stats.xp + 16);
-        stats.happiness = clamp(stats.happiness + 12);
-        updateStats();
-        trainingLog.textContent = `Success! Mochi learned ${training.trick}.`;
-        say(`Good job! Mochi learned ${training.trick}!`);
-        spawnParticles("sparkle", 12);
-        return true;
-      }
-
-      return false;
+    function getThreshold() {
+      return Number(thresholdSlider.value) / 100;
     }
 
-    function triggerAction(action, source = "manual") {
-      if (training.active) {
-        const success = checkTraining(action);
-        if (!success && ["jump", "roll", "wave"].includes(action)) {
-          setPetState("confused", 900);
-          say("Hmm? Try the selected trick gesture!");
-          spawnParticles("confuse", 5);
-          return;
-        }
-      }
+    function updateThresholdUI() {
+      thresholdValue.textContent = getThreshold().toFixed(2);
+    }
+
+    function updateExampleCounts() {
+      exampleCounts.innerHTML = "";
+      ACTIONS.forEach(action => {
+        const count = learnedExamples[action]?.length || 0;
+        const pill = document.createElement("span");
+        pill.className = "pill";
+        pill.textContent = `${action}: ${count}`;
+        exampleCounts.appendChild(pill);
+      });
+    }
+
+    function totalExamples() {
+      return ACTIONS.reduce((sum, action) => sum + (learnedExamples[action]?.length || 0), 0);
+    }
+
+    // =============================================================
+    // Pet actions + reward feedback for bandit brain
+    // =============================================================
+    function rewardBrain(reward, reason) {
+      if (!lastBrainDecision) return;
+      const { action, features } = lastBrainDecision;
+      const pred = dot(brain.weights[action], features);
+      const err = reward - pred;
+      brain.weights[action] = brain.weights[action].map((w, i) => w + brain.lr * err * features[i]);
+      brain.lastReward = reward;
+      saveJSON("mochi_bandit_brain_v1", brain);
+      updateBrainStatus(`reward ${reward.toFixed(2)} for ${action} (${reason})`);
+    }
+
+    function triggerAction(action, source = "manual", confidence = null) {
+      const learnedText = confidence !== null ? ` (${Math.round(confidence * 100)}% conf)` : "";
 
       if (action === "feed") {
         setPetState("eat", 1600);
-        spawnFood();
+        spawnFoodFall(petSceneX);
         spawnParticles("heart", 5);
         stats.hunger = clamp(stats.hunger + 24);
         stats.happiness = clamp(stats.happiness + 4);
-        say(source === "camera" ? "Pinch detected. Mochi got a snack!" : "Mochi is eating!");
+        stats.trust = clamp(stats.trust + 3);
+        stats.boredom = clamp(stats.boredom - 4);
+        say(source === "learned" ? `Learned feed gesture recognized${learnedText}. Mochi got a snack!` : source === "drop" ? "You dropped food near Mochi. Yum!" : "Mochi is eating!");
+        rewardBrain(1.0, "user fed Mochi");
       }
 
       if (action === "pet") {
         setPetState("happy", 1600);
         spawnParticles("heart", 10);
         stats.happiness = clamp(stats.happiness + 12);
-        say(source === "camera" ? "Open palm detected. Mochi loved the pets!" : "Mochi loved that!");
+        stats.trust = clamp(stats.trust + 5);
+        stats.boredom = clamp(stats.boredom - 8);
+        say(source === "learned" ? `Learned pet gesture recognized${learnedText}. Mochi loved it!` : "Mochi loved that!");
+        rewardBrain(0.8, "user petted Mochi");
       }
 
       if (action === "jump") {
@@ -755,12 +970,16 @@
           setPetState("confused", 900);
           say("Mochi is too sleepy to jump.");
           spawnParticles("confuse", 4);
+          rewardBrain(-0.3, "asked to jump while tired");
         } else {
           setPetState("jump", 900);
           spawnParticles("sparkle", 6);
           stats.energy = clamp(stats.energy - 8);
           stats.xp = clamp(stats.xp + 4);
-          say(source === "camera" ? "Upward swipe detected. Mochi jumped!" : "Boing!");
+          stats.boredom = clamp(stats.boredom - 7);
+          stats.trust = clamp(stats.trust + 1);
+          say(source === "learned" ? `Learned jump gesture recognized${learnedText}. Boing!` : "Boing!");
+          rewardBrain(0.65, "played trick");
         }
       }
 
@@ -769,12 +988,16 @@
           setPetState("confused", 900);
           say("Mochi needs more energy to roll.");
           spawnParticles("confuse", 4);
+          rewardBrain(-0.25, "asked to roll while tired");
         } else {
           setPetState("roll", 1100);
           spawnParticles("sparkle", 8);
           stats.energy = clamp(stats.energy - 12);
           stats.xp = clamp(stats.xp + 8);
-          say(source === "camera" ? "Circle gesture detected. Mochi rolled!" : "Mochi rolled around!");
+          stats.boredom = clamp(stats.boredom - 10);
+          stats.trust = clamp(stats.trust + 1);
+          say(source === "learned" ? `Learned roll gesture recognized${learnedText}. Mochi rolled!` : "Mochi rolled around!");
+          rewardBrain(0.75, "played trick");
         }
       }
 
@@ -782,30 +1005,37 @@
         setPetState("happy", 1300);
         spawnParticles("sparkle", 10);
         stats.happiness = clamp(stats.happiness + 8);
+        stats.trust = clamp(stats.trust + 2);
         stats.xp = clamp(stats.xp + 5);
-        say("Wave detected. Mochi says hi!");
+        stats.boredom = clamp(stats.boredom - 7);
+        say(source === "learned" ? `Learned wave gesture recognized${learnedText}. Mochi says hi!` : "Mochi says hi!");
+        rewardBrain(0.6, "social interaction");
       }
 
       if (action === "sleep") {
         setPetState("sleep", 0);
-        stats.energy = clamp(stats.energy + 8);
-        say("Mochi is napping...");
+        stats.energy = clamp(stats.energy + 10);
+        stats.happiness = clamp(stats.happiness + 2);
+        say(source === "learned" ? `Learned sleep gesture recognized${learnedText}. Mochi is napping...` : "Mochi is napping...");
+        rewardBrain(0.5, "let Mochi rest");
       }
 
       if (action === "confused") {
         setPetState("confused", 900);
         stats.happiness = clamp(stats.happiness - 1);
-        say("Mochi is confused.");
+        say("Mochi is confused. You can label that gesture below to teach it.");
         spawnParticles("confuse", 5);
       }
 
       updateStats();
     }
 
+    // Manual controls.
     document.getElementById("feedBtn").addEventListener("click", () => triggerAction("feed"));
     document.getElementById("petBtn").addEventListener("click", () => triggerAction("pet"));
     document.getElementById("jumpBtn").addEventListener("click", () => triggerAction("jump"));
     document.getElementById("rollBtn").addEventListener("click", () => triggerAction("roll"));
+    document.getElementById("waveBtn").addEventListener("click", () => triggerAction("wave"));
     document.getElementById("sleepBtn").addEventListener("click", () => triggerAction("sleep"));
 
     document.getElementById("bgBtn").addEventListener("click", () => {
@@ -814,35 +1044,26 @@
       say(`Background changed to ${backgrounds[bgIndex]}.`);
     });
 
-    document.getElementById("trainBtn").addEventListener("click", () => {
-      training.active = true;
-      training.trick = document.getElementById("trickSelect").value;
-      const instructions = {
-        jump: "Perform an upward hand swipe.",
-        roll: "Draw a circle with your index finger.",
-        wave: "Wave your hand left and right."
-      };
-      trainingLog.textContent = `Training ${training.trick}: ${instructions[training.trick]}`;
-      say(`Teach Mochi ${training.trick}!`);
-    });
-
-    // Simple stat decay loop.
+    // Stat dynamics.
     setInterval(() => {
-      stats.hunger = clamp(stats.hunger - 1);
-      stats.happiness = clamp(stats.happiness - 0.4);
+      stats.hunger = clamp(stats.hunger - 1.0);
+      stats.happiness = clamp(stats.happiness - 0.35);
+      stats.boredom = clamp(stats.boredom + 0.9);
 
       if (petState === "sleep") {
-        stats.energy = clamp(stats.energy + 2);
+        stats.energy = clamp(stats.energy + 2.4);
+        stats.boredom = clamp(stats.boredom - 0.4);
+      } else {
+        stats.energy = clamp(stats.energy - 0.25);
       }
 
-      if (stats.hunger < 25 && petState !== "eat") {
-        say("Mochi is hungry!");
-      }
-
+      if (stats.hunger < 25 && petState !== "eat") say("Mochi is hungry. Try pinch-dragging food or teach a feed gesture.");
       updateStats();
     }, 3500);
 
-    // Draw a tiny pixel cat directly on canvas.
+    // =============================================================
+    // Pixel pet drawing
+    // =============================================================
     function drawPixelCat(time) {
       const S = 4;
       const px = (x, y, w, h, color) => {
@@ -860,10 +1081,10 @@
 
       const blink = Math.floor(time / 2500) % 2 === 1 && petState === "idle";
       const eatOpen = petState === "eat" && Math.floor(time / 180) % 2 === 0;
-      const happy = petState === "happy" || petState === "wave";
-      const sleep = petState === "sleep";
+      const happy = ["happy", "ask_play"].includes(petState);
+      const sleep = petState === "sleep" || petState === "nap";
       const confused = petState === "confused";
-
+      const hungry = petState === "ask_food";
       const tailWag = happy ? Math.round(Math.sin(time / 90) * 2) : Math.round(Math.sin(time / 450));
 
       // Shadow
@@ -927,17 +1148,23 @@
         px(19, 4, 2, 1, dark);
         px(20, 5, 1, 2, dark);
         px(20, 8, 1, 1, dark);
+      } else if (hungry) {
+        px(10, 8, 2, 2, dark);
+        px(14, 8, 2, 2, dark);
+        px(12, 11, 3, 1, dark);
+        px(9, 11, 1, 1, blush);
+        px(16, 11, 1, 1, blush);
       } else {
         if (blink) {
           px(10, 9, 2, 1, dark);
           px(14, 9, 2, 1, dark);
         } else {
-          px(10, 8, 2, 2, dark);
-          px(14, 8, 2, 2, dark);
-          px(11, 8, 1, 1, "#fff");
-          px(15, 8, 1, 1, "#fff");
+          const eyeShift = lookDir > 0 ? 1 : 0;
+          px(10 + eyeShift, 8, 1, 2, dark);
+          px(14 + eyeShift, 8, 1, 2, dark);
+          px(10 + eyeShift, 8, 1, 1, "#fff");
+          px(14 + eyeShift, 8, 1, 1, "#fff");
         }
-
         if (eatOpen) {
           px(12, 11, 3, 2, dark);
           px(13, 12, 1, 1, "#ff8bae");
@@ -964,47 +1191,340 @@
     }
 
     function animatePet(time) {
+      petSceneX += (petTargetX - petSceneX) * 0.035;
+      petWrapper.style.left = `${petSceneX}%`;
       drawPixelCat(time);
       requestAnimationFrame(animatePet);
     }
 
     requestAnimationFrame(animatePet);
 
-    // -------------------------
-    // Camera + gesture detection
-    // -------------------------
+    // =============================================================
+    // Hand landmarks -> features -> few-shot gesture classification
+    // =============================================================
+    const SELECTED_POINTS = [0, 4, 8, 12, 16, 20, 5, 9, 13, 17];
+    const SEQ_LEN = 32;
+    const MAX_BUFFER_MS = 1650;
 
-    function distance(a, b) {
-      const dx = a.x - b.x;
-      const dy = a.y - b.y;
-      return Math.sqrt(dx * dx + dy * dy);
+    function extractFrameFeatures(lm) {
+      // Normalize to be somewhat invariant to camera position and hand size.
+      // Wrist becomes origin; palm size becomes scale.
+      const wrist = lm[0];
+      const scale = distance(lm[0], lm[9]) + 1e-5;
+      const features = [];
+
+      SELECTED_POINTS.forEach(index => {
+        features.push((lm[index].x - wrist.x) / scale);
+        features.push((lm[index].y - wrist.y) / scale);
+      });
+
+      // Add simple engineered features useful for gesture classification.
+      features.push(distance(lm[4], lm[8]) / scale); // pinch openness
+      features.push(distance(lm[8], lm[12]) / scale);
+      features.push(distance(lm[8], lm[0]) / scale);
+      features.push(distance(lm[20], lm[0]) / scale);
+
+      return features;
     }
 
-    function mean(values) {
-      return values.reduce((a, b) => a + b, 0) / values.length;
-    }
-
-    function pushMotionHistory(lm) {
+    function pushGestureFrame(lm) {
       const now = performance.now();
+      const features = extractFrameFeatures(lm);
+      rawFeatureBuffer.push({ t: now, f: features });
+      rawFeatureBuffer = rawFeatureBuffer.filter(p => now - p.t < MAX_BUFFER_MS);
+
       motionHistory.push({
         t: now,
         wristX: lm[0].x,
         wristY: lm[0].y,
         indexX: lm[8].x,
-        indexY: lm[8].y
+        indexY: lm[8].y,
+        thumbX: lm[4].x,
+        thumbY: lm[4].y
       });
+      motionHistory = motionHistory.filter(p => now - p.t < MAX_BUFFER_MS);
 
-      motionHistory = motionHistory.filter(p => now - p.t < 1600);
+      if (recording.active) {
+        recording.frames.push({ t: now - recording.startedAt, f: features });
+        const elapsed = now - recording.startedAt;
+        trainerLog.innerHTML = `<span class="recording-dot"></span>Recording ${recording.action} example... ${(elapsed / 1000).toFixed(1)}s`;
+        if (elapsed >= recording.durationMs) finishRecordingExample();
+      }
     }
 
+    function smoothSequence(seq) {
+      if (seq.length < 3) return seq;
+      return seq.map((frame, i) => {
+        const prev = seq[Math.max(0, i - 1)];
+        const next = seq[Math.min(seq.length - 1, i + 1)];
+        return frame.map((v, j) => (prev[j] + v + next[j]) / 3);
+      });
+    }
+
+    function resampleSequence(frames, targetLength = SEQ_LEN) {
+      if (!frames || frames.length < 3) return null;
+
+      const sorted = frames.slice().sort((a, b) => a.t - b.t);
+      const startT = sorted[0].t;
+      const endT = sorted[sorted.length - 1].t;
+      const duration = Math.max(1, endT - startT);
+      const result = [];
+
+      for (let i = 0; i < targetLength; i++) {
+        const targetT = startT + (duration * i) / (targetLength - 1);
+        let right = 1;
+        while (right < sorted.length && sorted[right].t < targetT) right++;
+        const left = Math.max(0, right - 1);
+        right = Math.min(right, sorted.length - 1);
+
+        const a = sorted[left];
+        const b = sorted[right];
+        const denom = Math.max(1e-5, b.t - a.t);
+        const alpha = Math.min(1, Math.max(0, (targetT - a.t) / denom));
+        const f = a.f.map((av, j) => av * (1 - alpha) + b.f[j] * alpha);
+        result.push(f);
+      }
+
+      // Add velocity features frame-to-frame to make trajectory direction matter more.
+      const withVelocity = result.map((f, i) => {
+        const prev = result[Math.max(0, i - 1)];
+        const vel = f.map((v, j) => v - prev[j]);
+        return [...f, ...vel];
+      });
+
+      return smoothSequence(withVelocity);
+    }
+
+    function getCurrentGestureSequence() {
+      const now = performance.now();
+      const frames = rawFeatureBuffer.filter(p => now - p.t < 1400);
+      return resampleSequence(frames, SEQ_LEN);
+    }
+
+    function frameDistance(a, b) {
+      let s = 0;
+      const n = Math.min(a.length, b.length);
+      for (let i = 0; i < n; i++) {
+        const d = a[i] - b[i];
+        s += d * d;
+      }
+      return Math.sqrt(s / n);
+    }
+
+    function dtwDistance(seqA, seqB) {
+      const n = seqA.length;
+      const m = seqB.length;
+      const window = 8;
+      const INF = 1e9;
+      const dp = Array.from({ length: n + 1 }, () => Array(m + 1).fill(INF));
+      dp[0][0] = 0;
+
+      for (let i = 1; i <= n; i++) {
+        const jStart = Math.max(1, i - window);
+        const jEnd = Math.min(m, i + window);
+        for (let j = jStart; j <= jEnd; j++) {
+          const cost = frameDistance(seqA[i - 1], seqB[j - 1]);
+          dp[i][j] = cost + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+        }
+      }
+
+      return dp[n][m] / (n + m);
+    }
+
+    function classifyLearnedGesture(seq) {
+      const all = [];
+      ACTIONS.forEach(action => {
+        (learnedExamples[action] || []).forEach((example, idx) => {
+          const dist = dtwDistance(seq, example.seq);
+          all.push({ action, idx, dist });
+        });
+      });
+
+      if (all.length === 0) return null;
+      all.sort((a, b) => a.dist - b.dist);
+
+      const perAction = {};
+      ACTIONS.forEach(action => { perAction[action] = []; });
+      all.forEach(item => perAction[item.action].push(item.dist));
+
+      const scored = ACTIONS
+        .filter(action => perAction[action].length > 0)
+        .map(action => {
+          const topK = perAction[action].slice(0, 3);
+          const avgDist = mean(topK);
+          // Heuristic similarity transform. Lower DTW distance -> higher confidence.
+          const similarity = Math.exp(-avgDist * 2.6);
+          return { action, dist: avgDist, confidence: similarity, examples: perAction[action].length };
+        })
+        .sort((a, b) => b.confidence - a.confidence);
+
+      const best = scored[0];
+      const second = scored[1];
+      const margin = second ? Math.max(0, best.confidence - second.confidence) : 0.18;
+      const confidence = clamp((best.confidence * 0.75 + margin * 0.9) * 100, 0, 100) / 100;
+
+      return {
+        action: best.action,
+        confidence,
+        dist: best.dist,
+        ranked: scored.map(s => ({ ...s, confidence: s.action === best.action ? confidence : s.confidence }))
+      };
+    }
+
+    function maybeRunLearnedClassifier() {
+      if (totalExamples() === 0 || recording.active) return;
+      const seq = getCurrentGestureSequence();
+      if (!seq) return;
+      lastGestureSequenceForFeedback = seq;
+
+      const result = classifyLearnedGesture(seq);
+      if (!result) return;
+      lastPrediction = { ...result, seq, time: performance.now() };
+      renderModelStatus(result);
+
+      const threshold = getThreshold();
+      if (result.confidence >= threshold && canTriggerGesture(`learned_${result.action}`, 2400)) {
+        triggerAction(result.action, "learned", result.confidence);
+        spawnParticles("brain", 5);
+      } else if (result.confidence >= Math.max(0.35, threshold - 0.18) && canTriggerGesture("uncertain_prompt", 3600)) {
+        setPetState("confused", 900);
+        say(`Mochi thinks that might be ${result.action} (${Math.round(result.confidence * 100)}%). Label it if correct!`);
+      }
+    }
+
+    function renderModelStatus(result = null) {
+      if (!result) {
+        modelStatus.textContent = totalExamples() === 0 ? "No learned examples yet. Record gestures first." : "Waiting for a full gesture sequence...";
+        confidenceGrid.innerHTML = "";
+        return;
+      }
+
+      modelStatus.textContent = `Best: ${result.action} | confidence ${(result.confidence * 100).toFixed(0)}% | DTW distance ${result.dist.toFixed(3)} | examples ${totalExamples()}`;
+      confidenceGrid.innerHTML = "";
+      result.ranked.slice(0, 4).forEach(row => {
+        const div = document.createElement("div");
+        div.className = "conf-row";
+        div.innerHTML = `
+          <span>${row.action}</span>
+          <div class="conf-track"><div class="conf-fill" style="width:${Math.round(row.confidence * 100)}%"></div></div>
+          <span>${Math.round(row.confidence * 100)}%</span>
+        `;
+        confidenceGrid.appendChild(div);
+      });
+    }
+
+    function addGestureExample(action, seq, source = "recording") {
+      if (!seq || seq.length !== SEQ_LEN) {
+        trainerLog.textContent = "Could not save example. Try again with your hand clearly visible.";
+        return false;
+      }
+      learnedExamples[action] = learnedExamples[action] || [];
+      learnedExamples[action].push({ seq, createdAt: Date.now(), source });
+      saveJSON("mochi_gesture_examples_v2", learnedExamples);
+      updateExampleCounts();
+      spawnParticles("brain", 7);
+      stats.xp = clamp(stats.xp + 5);
+      stats.trust = clamp(stats.trust + 2);
+      updateStats();
+      return true;
+    }
+
+    function startRecordingExample() {
+      if (!hands) {
+        trainerLog.textContent = "Start the camera first, then record an example.";
+        say("I need the camera to learn your gesture.");
+        return;
+      }
+      recording.active = true;
+      recording.action = learnActionSelect.value;
+      recording.startedAt = performance.now();
+      recording.frames = [];
+      trainerLog.innerHTML = `<span class="recording-dot"></span>Recording ${recording.action} for 1.5 seconds...`;
+      say(`Show me your ${recording.action} gesture.`);
+    }
+
+    function finishRecordingExample() {
+      if (!recording.active) return;
+      const action = recording.action;
+      const seq = resampleSequence(recording.frames, SEQ_LEN);
+      recording.active = false;
+      recording.action = null;
+      recording.frames = [];
+
+      if (addGestureExample(action, seq, "recording")) {
+        const n = learnedExamples[action].length;
+        trainerLog.textContent = `Saved ${action} example #${n}. Record 3–5 examples for better recognition.`;
+        say(`I learned another ${action} example!`);
+      }
+    }
+
+    document.getElementById("recordExampleBtn").addEventListener("click", startRecordingExample);
+
+    document.getElementById("clearExamplesBtn").addEventListener("click", () => {
+      if (!confirm("Clear all learned gesture examples?")) return;
+      learnedExamples = emptyExamples();
+      saveJSON("mochi_gesture_examples_v2", learnedExamples);
+      updateExampleCounts();
+      renderModelStatus(null);
+      trainerLog.textContent = "Cleared all learned examples.";
+      say("Mochi forgot the custom gestures. Teach me again!");
+    });
+
+    thresholdSlider.addEventListener("input", updateThresholdUI);
+
+    document.getElementById("addFeedbackBtn").addEventListener("click", () => {
+      const action = feedbackLabelSelect.value;
+      const seq = lastGestureSequenceForFeedback || getCurrentGestureSequence();
+      if (addGestureExample(action, seq, "active_feedback")) {
+        trainerLog.textContent = `Active learning: added last gesture as ${action}.`;
+        say(`Thanks! I labeled that as ${action}.`);
+      }
+    });
+
+    document.getElementById("exportModelBtn").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify({ learnedExamples, stats, brain }, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "mochi-local-gesture-model.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("importModelBtn").addEventListener("click", () => {
+      document.getElementById("importModelInput").click();
+    });
+
+    document.getElementById("importModelInput").addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        const data = JSON.parse(await file.text());
+        if (data.learnedExamples) learnedExamples = data.learnedExamples;
+        if (data.stats) stats = data.stats;
+        if (data.brain) brain = data.brain;
+        saveJSON("mochi_gesture_examples_v2", learnedExamples);
+        saveJSON("mochi_stats_v2", stats);
+        saveJSON("mochi_bandit_brain_v1", brain);
+        updateExampleCounts();
+        updateStats();
+        updateBrainStatus("imported saved model");
+        trainerLog.textContent = "Imported saved gesture model.";
+      } catch (err) {
+        trainerLog.textContent = "Import failed. Make sure this is a Mochi model JSON file.";
+      }
+    });
+
+    // Run learned classifier periodically instead of every frame.
+    setInterval(maybeRunLearnedClassifier, 360);
+
+    // =============================================================
+    // Rule-based fallback gestures and CV interactions
+    // =============================================================
     function fingerCount(lm) {
       const fingers = [
-        [8, 6],   // index tip, pip
-        [12, 10], // middle
-        [16, 14], // ring
-        [20, 18]  // pinky
+        [8, 6], [12, 10], [16, 14], [20, 18]
       ];
-
       return fingers.filter(([tip, pip]) => lm[tip].y < lm[pip].y - 0.035).length;
     }
 
@@ -1012,7 +1532,6 @@
       const now = performance.now();
       const recent = motionHistory.filter(p => now - p.t < 520);
       if (recent.length < 5) return false;
-
       const first = recent[0];
       const last = recent[recent.length - 1];
       return first.wristY - last.wristY > 0.13;
@@ -1022,27 +1541,18 @@
       const now = performance.now();
       const recent = motionHistory.filter(p => now - p.t < 1000);
       if (recent.length < 8) return false;
-
       const xs = recent.map(p => p.wristX);
       const range = Math.max(...xs) - Math.min(...xs);
       if (range < 0.20) return false;
 
       let directionChanges = 0;
       let lastDirection = 0;
-
       for (let i = 1; i < recent.length; i++) {
         const dx = recent[i].wristX - recent[i - 1].wristX;
         const dir = Math.abs(dx) < 0.01 ? 0 : Math.sign(dx);
-
-        if (dir !== 0 && lastDirection !== 0 && dir !== lastDirection) {
-          directionChanges++;
-        }
-
-        if (dir !== 0) {
-          lastDirection = dir;
-        }
+        if (dir !== 0 && lastDirection !== 0 && dir !== lastDirection) directionChanges++;
+        if (dir !== 0) lastDirection = dir;
       }
-
       return directionChanges >= 2;
     }
 
@@ -1050,95 +1560,205 @@
       const now = performance.now();
       const recent = motionHistory.filter(p => now - p.t < 1400);
       if (recent.length < 12) return false;
-
       const xs = recent.map(p => p.indexX);
       const ys = recent.map(p => p.indexY);
-
       const xRange = Math.max(...xs) - Math.min(...xs);
       const yRange = Math.max(...ys) - Math.min(...ys);
-
       if (xRange < 0.11 || yRange < 0.11) return false;
 
       const cx = mean(xs);
       const cy = mean(ys);
-
       let totalAngle = 0;
       let prev = Math.atan2(recent[0].indexY - cy, recent[0].indexX - cx);
-
       for (let i = 1; i < recent.length; i++) {
         const current = Math.atan2(recent[i].indexY - cy, recent[i].indexX - cx);
         let delta = current - prev;
-
         while (delta > Math.PI) delta -= Math.PI * 2;
         while (delta < -Math.PI) delta += Math.PI * 2;
-
         totalAngle += delta;
         prev = current;
       }
-
       return Math.abs(totalAngle) > Math.PI * 1.45;
     }
 
     function canTriggerGesture(name, cooldownMs) {
       const now = performance.now();
-      if (lastGestureTimes[name] && now - lastGestureTimes[name] < cooldownMs) {
-        return false;
-      }
-
+      if (lastGestureTimes[name] && now - lastGestureTimes[name] < cooldownMs) return false;
       lastGestureTimes[name] = now;
       return true;
     }
 
-    function analyzeGesture(lm) {
-      pushMotionHistory(lm);
+    function mapHandToScene(lm) {
+      const rect = scene.getBoundingClientRect();
+      const x = (1 - lm[8].x) * rect.width;
+      const y = lm[8].y * rect.height;
+      return { x, y, xPct: (x / rect.width) * 100, yPct: (y / rect.height) * 100 };
+    }
 
+    function updatePetFollowHand(lm) {
+      const p = mapHandToScene(lm);
+      lastHandSeenAt = performance.now();
+      const previous = petTargetX;
+      petTargetX = clamp(p.xPct, 15, 85);
+      lookDir = petTargetX >= previous ? 1 : -1;
+
+      const petXpx = scene.getBoundingClientRect().width * (petSceneX / 100);
+      const petYpx = scene.getBoundingClientRect().height - 120;
+      const dx = p.x - petXpx;
+      const dy = p.y - petYpx;
+      handNearPet = Math.sqrt(dx * dx + dy * dy) < 125;
+    }
+
+    function updatePinchFoodDrag(lm, isPinch) {
+      const pos = mapHandToScene(lm);
+
+      if (isPinch && !foodDrag.active && canTriggerGesture("start_food_drag", 650)) {
+        const el = document.createElement("div");
+        el.className = "held-food";
+        scene.appendChild(el);
+        foodDrag = { active: true, el, x: pos.x, y: pos.y, startedAt: performance.now() };
+        say("Pinch detected. Drag the snack over Mochi, then release!");
+      }
+
+      if (foodDrag.active && foodDrag.el) {
+        foodDrag.x = pos.x;
+        foodDrag.y = pos.y;
+        foodDrag.el.style.left = `${pos.x}px`;
+        foodDrag.el.style.top = `${pos.y}px`;
+
+        if (!isPinch && performance.now() - foodDrag.startedAt > 280) {
+          const rect = scene.getBoundingClientRect();
+          const petXpx = rect.width * (petSceneX / 100);
+          const petYpx = rect.height - 130;
+          const d = Math.sqrt((foodDrag.x - petXpx) ** 2 + (foodDrag.y - petYpx) ** 2);
+          foodDrag.el.remove();
+          foodDrag = { active: false, el: null, x: 0, y: 0, startedAt: 0 };
+
+          if (d < 145) {
+            triggerAction("feed", "drop");
+          } else {
+            setPetState("confused", 800);
+            say("The snack missed Mochi. Try releasing it closer!");
+            spawnParticles("confuse", 3);
+          }
+        }
+      }
+    }
+
+    function analyzeFallbackGestures(lm) {
       const handScale = distance(lm[0], lm[9]) + 0.0001;
       const pinchDistance = distance(lm[4], lm[8]) / handScale;
       const count = fingerCount(lm);
-
       const avgTipToPalm = mean([8, 12, 16, 20].map(i => distance(lm[i], lm[9]))) / handScale;
 
       const isPinch = pinchDistance < 0.42;
       const isOpenPalm = count >= 4;
       const isFist = count <= 1 && avgTipToPalm < 1.45;
 
-      if (isPinch && canTriggerGesture("feed", 2200)) {
-        triggerAction("feed", "camera");
-        return "pinch / feed";
-      }
+      updatePinchFoodDrag(lm, isPinch);
 
-      if (detectUpSwipe() && canTriggerGesture("jump", 1600)) {
-        triggerAction("jump", "camera");
-        return "up swipe / jump";
+      // Learned classifier gets priority. These rules are fallback and physical interactions.
+      if (detectUpSwipe() && canTriggerGesture("jump", 1800)) {
+        triggerAction("jump", "heuristic");
+        return "fallback up swipe / jump";
       }
-
-      if (detectCircle() && canTriggerGesture("roll", 3000)) {
-        triggerAction("roll", "camera");
-        return "circle / roll";
+      if (detectCircle() && canTriggerGesture("roll", 3400)) {
+        triggerAction("roll", "heuristic");
+        return "fallback circle / roll";
       }
-
-      if (detectWave() && canTriggerGesture("wave", 2400)) {
-        triggerAction("wave", "camera");
-        return "wave";
+      if (detectWave() && canTriggerGesture("wave", 2600)) {
+        triggerAction("wave", "heuristic");
+        return "fallback wave";
       }
-
-      if (isOpenPalm && canTriggerGesture("pet", 1800)) {
-        triggerAction("pet", "camera");
-        return "open palm / pet";
+      if (isOpenPalm && handNearPet && canTriggerGesture("pet", 1900)) {
+        triggerAction("pet", "heuristic");
+        return "open palm near pet / pet";
       }
-
-      if (isFist && canTriggerGesture("confused", 2600)) {
-        triggerAction("confused", "camera");
-        return "fist / confused";
+      if (isFist && canTriggerGesture("confused", 3000)) {
+        triggerAction("confused", "heuristic");
+        return "fist / unknown";
       }
-
+      if (isPinch) return "pinch-holding food";
       return `tracking hand | fingers: ${count}`;
     }
 
+    // =============================================================
+    // Contextual bandit pet brain
+    // =============================================================
+    function brainFeatures() {
+      return [
+        1,
+        (100 - stats.hunger) / 100,
+        stats.boredom / 100,
+        (100 - stats.energy) / 100,
+        handNearPet ? 1 : 0,
+        stats.trust / 100
+      ];
+    }
+
+    function chooseBrainAction() {
+      const features = brainFeatures();
+      brain.steps += 1;
+      let action;
+      const explore = Math.random() < brain.epsilon;
+      if (explore) {
+        action = BRAIN_ACTIONS[Math.floor(Math.random() * BRAIN_ACTIONS.length)];
+      } else {
+        action = BRAIN_ACTIONS
+          .map(a => ({ action: a, score: dot(brain.weights[a], features) }))
+          .sort((a, b) => b.score - a.score)[0].action;
+      }
+      lastBrainDecision = { action, features, time: performance.now() };
+      saveJSON("mochi_bandit_brain_v1", brain);
+      runBrainAction(action, explore);
+    }
+
+    function runBrainAction(action, explore = false) {
+      const prefix = explore ? "exploring" : "policy";
+      if (action === "ask_food") {
+        setPetState("ask_food", 2500);
+        say("Mochi's learned policy says: ask for food.");
+      } else if (action === "ask_play") {
+        setPetState("ask_play", 2500);
+        say("Mochi's learned policy says: ask to play. Try a trick gesture!");
+      } else if (action === "nap") {
+        setPetState("sleep", 0);
+        say("Mochi's learned policy says: take a nap.");
+      } else {
+        setPetState("idle", 0);
+        say("Mochi's learned policy says: idle and watch your hand.");
+      }
+      updateBrainStatus(`${prefix}: ${action}`);
+    }
+
+    function updateBrainStatus(extra = "") {
+      const features = brainFeatures();
+      const scores = BRAIN_ACTIONS
+        .map(a => `${a}:${dot(brain.weights[a], features).toFixed(2)}`)
+        .join(" | ");
+      brainStatus.textContent = `steps ${brain.steps} | last reward ${brain.lastReward.toFixed(2)} | ${scores}${extra ? " | " + extra : ""}`;
+    }
+
+    setInterval(() => {
+      if (performance.now() - lastHandSeenAt > 2500) handNearPet = false;
+      chooseBrainAction();
+    }, 9000);
+
+    document.getElementById("brainStepBtn").addEventListener("click", chooseBrainAction);
+    document.getElementById("resetBrainBtn").addEventListener("click", () => {
+      brain = makeFreshBrain();
+      lastBrainDecision = null;
+      saveJSON("mochi_bandit_brain_v1", brain);
+      updateBrainStatus("brain reset");
+      say("Mochi's behavior policy was reset.");
+    });
+
+    // =============================================================
+    // Camera drawing and MediaPipe integration
+    // =============================================================
     function drawHandLandmarks(landmarks) {
       const w = cameraCanvas.width;
       const h = cameraCanvas.height;
-
       const connections = [
         [0,1],[1,2],[2,3],[3,4],
         [0,5],[5,6],[6,7],[7,8],
@@ -1155,7 +1775,6 @@
       for (const [a, b] of connections) {
         const pa = landmarks[a];
         const pb = landmarks[b];
-
         cameraCtx.beginPath();
         cameraCtx.moveTo((1 - pa.x) * w, pa.y * h);
         cameraCtx.lineTo((1 - pb.x) * w, pb.y * h);
@@ -1172,11 +1791,8 @@
     function onHandsResults(results) {
       const w = cameraCanvas.width;
       const h = cameraCanvas.height;
-
       cameraCtx.save();
       cameraCtx.clearRect(0, 0, w, h);
-
-      // Mirror the camera preview so it feels natural.
       cameraCtx.translate(w, 0);
       cameraCtx.scale(-1, 1);
       cameraCtx.drawImage(results.image, 0, 0, w, h);
@@ -1185,10 +1801,16 @@
       if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         const lm = results.multiHandLandmarks[0];
         drawHandLandmarks(lm);
-        const gestureText = analyzeGesture(lm);
-        cameraStatus.textContent = `Camera on. Detected: ${gestureText}`;
+        updatePetFollowHand(lm);
+        pushGestureFrame(lm);
+        const gestureText = analyzeFallbackGestures(lm);
+        cameraStatus.textContent = `Camera on. Detected: ${gestureText}. Learned examples: ${totalExamples()}.`;
       } else {
         cameraStatus.textContent = "Camera on. Show one hand to interact with Mochi.";
+        if (foodDrag.active && foodDrag.el) {
+          foodDrag.el.remove();
+          foodDrag = { active: false, el: null, x: 0, y: 0, startedAt: 0 };
+        }
       }
     }
 
@@ -1213,35 +1835,29 @@
         hands.onResults(onHandsResults);
 
         camera = new Camera(video, {
-          onFrame: async () => {
-            await hands.send({ image: video });
-          },
+          onFrame: async () => { await hands.send({ image: video }); },
           width: 320,
           height: 240
         });
 
         await camera.start();
         cameraStatus.textContent = "Camera starting...";
-        say("Camera is on! Try waving at Mochi.");
+        say("Camera is on. Record examples or try pinch-dragging food.");
       } catch (err) {
         console.error(err);
-        cameraStatus.textContent = "Could not start camera. Use localhost and allow camera permission.";
-        say("Camera did not start, but buttons still work!");
+        cameraStatus.textContent = "Could not start camera. Use localhost/HTTPS and allow camera permission.";
+        say("Camera did not start, but buttons still work.");
       }
     }
 
     function stopCamera() {
       try {
-        if (camera && camera.stop) {
-          camera.stop();
-        }
-
-        if (video.srcObject) {
-          video.srcObject.getTracks().forEach(track => track.stop());
-        }
-
+        if (camera && camera.stop) camera.stop();
+        if (video.srcObject) video.srcObject.getTracks().forEach(track => track.stop());
         cameraStatus.textContent = "Camera off. Manual buttons still work.";
         cameraCtx.clearRect(0, 0, cameraCanvas.width, cameraCanvas.height);
+        if (foodDrag.active && foodDrag.el) foodDrag.el.remove();
+        foodDrag = { active: false, el: null, x: 0, y: 0, startedAt: 0 };
         say("Camera off.");
       } catch (err) {
         console.error(err);
@@ -1251,7 +1867,14 @@
     document.getElementById("startCameraBtn").addEventListener("click", startCamera);
     document.getElementById("stopCameraBtn").addEventListener("click", stopCamera);
 
+    // =============================================================
+    // Initial render
+    // =============================================================
     updateStats();
+    updateExampleCounts();
+    updateThresholdUI();
+    renderModelStatus(null);
+    updateBrainStatus("ready");
   </script>
 </body>
 </html>
