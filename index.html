@@ -10,8 +10,10 @@
     It uses MediaPipe's pretrained hand-tracking model through CDN scripts.
     The ML layer below is local-only: few-shot gesture examples are stored in localStorage.
   -->
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <!-- TensorFlow.js + MobileNet + kNN classifier for teachable object recognition -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier@1.2.6"></script>
 
   <style>
     :root {
@@ -389,6 +391,11 @@
       border: 2px solid var(--ink);
       padding: 8px;
     }
+    
+    .camera-controls {
+      margin-top: 10px;
+      margin-bottom: 14px;
+    }
 
     .log { background: #f7fbff; min-height: 48px; }
 
@@ -462,6 +469,43 @@
 
     .held-food { pointer-events: none; }
 
+    .vision-preview {
+      position: relative;
+      border: 3px solid var(--ink);
+      background: #111;
+      overflow: hidden;
+      aspect-ratio: 4 / 3;
+      margin-top: 8px;
+    }
+
+    #visionCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    .vision-badge {
+      display: inline-block;
+      border: 2px solid var(--ink);
+      background: #dff7ff;
+      padding: 4px 6px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .vision-badge.hot {
+      background: #ffd6e6;
+    }
+
+    .vision-badge.good {
+      background: #d7ffd9;
+    }
+
+    .vision-badge.warn {
+      background: #fff1b8;
+    }
+
     .confidence-grid {
       display: grid;
       gap: 6px;
@@ -533,8 +577,96 @@
       padding: 8px;
     }
 
+
+    .left-column {
+      display: grid;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .chat-window {
+      border: 3px solid var(--ink);
+      background: var(--panel);
+      box-shadow: 8px 8px 0 var(--shadow);
+    }
+
+    .chat-content {
+      padding: 14px;
+      background: #fffafd;
+    }
+
+    .chat-messages {
+      height: 190px;
+      overflow-y: auto;
+      border: 3px solid var(--ink);
+      background:
+        radial-gradient(circle, rgba(127,106,191,0.10) 2px, transparent 2px) 0 0 / 18px 18px,
+        #fffdf7;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      scroll-behavior: smooth;
+    }
+
+    .chat-message {
+      max-width: 78%;
+      border: 2px solid var(--ink);
+      padding: 8px 10px;
+      font-size: 13px;
+      line-height: 1.35;
+      box-shadow: 3px 3px 0 var(--shadow);
+      word-break: break-word;
+    }
+
+    .chat-message.user {
+      align-self: flex-end;
+      background: #dff7ff;
+    }
+
+    .chat-message.cat {
+      align-self: flex-start;
+      background: #ffe0f0;
+    }
+
+    .chat-message.system {
+      align-self: center;
+      max-width: 92%;
+      background: #fff4d8;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .chat-form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .chat-input {
+      width: 100%;
+      min-width: 0;
+      border: 3px solid var(--ink);
+      background: #ffffff;
+      color: var(--ink);
+      padding: 9px 10px;
+      font-weight: 700;
+      box-shadow: 3px 3px 0 var(--shadow);
+    }
+
+    .chat-hint {
+      margin-top: 8px;
+      font-size: 12px;
+      line-height: 1.45;
+      background: #fff4d8;
+      border: 2px solid var(--ink);
+      padding: 8px;
+    }
+
     @media (max-width: 980px) {
       .app { grid-template-columns: 1fr; }
+      .left-column { width: 100%; }
       .scene { height: 390px; }
       .stats { grid-template-columns: repeat(3, 1fr); }
     }
@@ -549,7 +681,8 @@
 
 <body>
   <main class="app">
-    <section class="pet-window">
+    <div class="left-column">
+      <section class="pet-window">
       <div class="titlebar">
         <div class="window-buttons">
           <span class="fake-btn">×</span>
@@ -590,6 +723,41 @@
       </div>
     </section>
 
+    <section class="chat-window">
+      <div class="titlebar">
+        <div>mochi.chat <small>meow-only replies</small></div>
+        <div class="window-buttons">
+          <span class="fake-btn">×</span>
+          <span class="fake-btn">□</span>
+          <span class="fake-btn">−</span>
+        </div>
+      </div>
+
+      <div class="chat-content">
+        <div id="chatMessages" class="chat-messages">
+          <div class="chat-message system">Message Mochi. Mochi only speaks meow.</div>
+          <div class="chat-message cat">meow?</div>
+        </div>
+
+        <form id="chatForm" class="chat-form">
+          <input
+            id="chatInput"
+            class="chat-input"
+            type="text"
+            maxlength="160"
+            autocomplete="off"
+            placeholder="say something to Mochi..."
+          />
+          <button class="pixel-btn" type="submit">Send</button>
+        </form>
+
+        <div class="chat-hint">
+          Try typing: “are you hungry?”, “jump”, “roll”, “go to sleep”, “you are cute”, or anything else.
+        </div>
+      </div>
+    </section>
+    </div>
+
     <aside class="side-panel">
       <div class="titlebar">
         <div>camera + local ML</div>
@@ -607,7 +775,7 @@
             <video id="video" playsinline style="display:none;"></video>
             <canvas id="cameraCanvas" width="320" height="240"></canvas>
           </div>
-          <div class="small-row" style="margin-top:10px;">
+          <div class="small-row camera-controls">
             <button class="pixel-btn" id="startCameraBtn">Start Camera</button>
             <button class="pixel-btn bad" id="stopCameraBtn">Stop</button>
           </div>
@@ -660,6 +828,56 @@
         </div>
 
         <div class="card">
+          <h3>Mochi Vision <span>MobileNet transfer learning</span></h3>
+
+          <div class="metric-box" id="visionStatus">
+            Vision model not loaded yet. Click Load Vision Model, then show Mochi an object.
+          </div>
+
+          <div class="vision-preview">
+            <canvas id="visionCanvas" width="320" height="240"></canvas>
+          </div>
+
+          <div class="small-row" style="margin-top:10px;">
+            <button class="pixel-btn good" id="loadVisionBtn">Load Vision Model</button>
+            <button class="pixel-btn bad" id="clearVisionBtn">Clear Vision</button>
+          </div>
+
+          <div class="small-row" style="margin-top:8px;">
+            <select id="visionLabelSelect">
+              <option value="food">Food</option>
+              <option value="toy">Toy</option>
+              <option value="bed">Bed</option>
+              <option value="brush">Brush</option>
+              <option value="person">Person</option>
+              <option value="unknown">Unknown</option>
+            </select>
+
+            <input
+              id="customVisionLabel"
+              type="text"
+              maxlength="24"
+              placeholder="custom label"
+              style="min-width: 120px;"
+            />
+
+            <button class="pixel-btn" id="captureVisionBtn">Capture Example</button>
+          </div>
+
+          <div class="small-row" style="margin-top:8px;">
+            <label style="font-size:12px;font-weight:700;">Vision threshold</label>
+            <input id="visionThresholdSlider" type="range" min="40" max="95" value="72" />
+            <span class="pill" id="visionThresholdValue">0.72</span>
+          </div>
+
+          <div class="pill-grid" id="visionExampleCounts"></div>
+
+          <div class="log" id="visionLog" style="margin-top:8px;">
+            Teach Mochi by holding an object in front of the camera and capturing 3–5 examples per label.
+          </div>
+        </div>
+
+        <div class="card">
           <h3>Pet Brain <span>contextual bandit</span></h3>
           <div class="metric-box" id="brainStatus">Policy warming up. Mochi will autonomously choose whether to ask for food, play, nap, or idle.</div>
           <div class="small-row" style="margin-top:8px;">
@@ -683,7 +901,7 @@
         <div class="card">
           <h3>What is technical here?</h3>
           <div class="code-note">
-            Camera frames are converted into 21 hand landmarks by MediaPipe. This app normalizes the hand pose, records temporal trajectories, resamples them to a fixed length, classifies gestures with Dynamic Time Warping and kNN-style prototypes, handles uncertainty with confidence thresholds, accepts active-learning feedback, and uses a tiny contextual-bandit policy for autonomous pet behavior.
+            Camera frames are converted into 21 hand landmarks by MediaPipe for gesture learning. The app normalizes hand poses, records temporal trajectories, resamples them to a fixed length, and classifies gestures with Dynamic Time Warping plus kNN-style prototypes. Mochi Vision adds TensorFlow.js MobileNet transfer learning: webcam frames are embedded into feature vectors, labeled examples are stored locally, and a kNN classifier recognizes user-taught objects. The system also handles uncertainty with confidence thresholds, accepts active-learning feedback, and uses a tiny contextual-bandit policy for autonomous pet behavior.
           </div>
         </div>
       </div>
@@ -721,6 +939,21 @@
     const learnActionSelect = document.getElementById("learnActionSelect");
     const feedbackLabelSelect = document.getElementById("feedbackLabelSelect");
     const brainStatus = document.getElementById("brainStatus");
+    const visionStatus = document.getElementById("visionStatus");
+    const visionLog = document.getElementById("visionLog");
+    const visionCanvas = document.getElementById("visionCanvas");
+    const visionCtx = visionCanvas.getContext("2d");
+    const loadVisionBtn = document.getElementById("loadVisionBtn");
+    const captureVisionBtn = document.getElementById("captureVisionBtn");
+    const clearVisionBtn = document.getElementById("clearVisionBtn");
+    const visionLabelSelect = document.getElementById("visionLabelSelect");
+    const customVisionLabel = document.getElementById("customVisionLabel");
+    const visionExampleCounts = document.getElementById("visionExampleCounts");
+    const visionThresholdSlider = document.getElementById("visionThresholdSlider");
+    const visionThresholdValue = document.getElementById("visionThresholdValue");
+    const chatMessages = document.getElementById("chatMessages");
+    const chatForm = document.getElementById("chatForm");
+    const chatInput = document.getElementById("chatInput");
 
     // =============================================================
     // Global state
@@ -776,6 +1009,19 @@
     const BRAIN_ACTIONS = ["ask_food", "ask_play", "nap", "idle"];
     let brain = loadJSON("mochi_bandit_brain_v1", makeFreshBrain());
     let lastBrainDecision = null;
+
+    // =============================================================
+    // Mochi Vision: MobileNet embedding + kNN object recognition
+    // =============================================================
+    let visionModel = null;
+    let visionClassifier = null;
+    let visionLoaded = false;
+    let visionRunning = false;
+    let visionLastPrediction = null;
+    let visionLastTriggerAt = 0;
+
+    const VISION_LABELS = ["food", "toy", "bed", "brush", "person", "unknown"];
+    const VISION_STORAGE_KEY = "mochi_vision_knn_dataset_v1";
 
     function emptyExamples() {
       return ACTIONS.reduce((acc, action) => {
@@ -859,6 +1105,93 @@
       speech.textContent = text;
     }
 
+    function randomChoice(items) {
+      return items[Math.floor(Math.random() * items.length)];
+    }
+
+    function addChatMessage(role, text) {
+      const message = document.createElement("div");
+      message.className = `chat-message ${role}`;
+      message.textContent = text;
+      chatMessages.appendChild(message);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function makeMeowReply(userText) {
+      const text = userText.toLowerCase();
+
+      const normalMeows = ["meow", "meow meow", "mew", "mew mew", "mrrp", "mrow", "nyaa", "miao"];
+      const questionMeows = ["meow?", "mew?", "mrrp?", "meow meow?", "mrow?"];
+      const happyMeows = ["meow!", "mew mew!", "mrrrp!", "prrr meow!", "nyaa!"];
+      const hungryMeows = ["meowww", "mrrrow", "meow meow meow", "mewww", "mrowww"];
+      const sleepyMeows = ["meow...", "mew...", "prrr...", "mrrp...", "nya..."];
+      const confusedMeows = ["mrrp?", "meow??", "mew...?", "mrow?", "nya?"];
+
+      if (text.includes("hungry") || text.includes("food") || text.includes("feed") || text.includes("treat") || text.includes("fish")) {
+        return randomChoice(hungryMeows);
+      }
+
+      if (text.includes("sleep") || text.includes("tired") || text.includes("nap")) {
+        return randomChoice(sleepyMeows);
+      }
+
+      if (text.includes("cute") || text.includes("love") || text.includes("good") || text.includes("pet")) {
+        return randomChoice(happyMeows);
+      }
+
+      if (text.includes("what") || text.includes("why") || text.includes("how") || text.includes("?")) {
+        return randomChoice(questionMeows);
+      }
+
+      if (text.trim().length <= 2) {
+        return randomChoice(confusedMeows);
+      }
+
+      return randomChoice(normalMeows);
+    }
+
+    function runChatSideEffect(userText, catReply) {
+      const text = userText.toLowerCase();
+
+      if (text.includes("feed") || text.includes("food") || text.includes("hungry") || text.includes("treat") || text.includes("fish")) {
+        triggerAction("feed", "chat");
+      } else if (text.includes("pet") || text.includes("cute") || text.includes("love") || text.includes("good")) {
+        triggerAction("pet", "chat");
+      } else if (text.includes("jump") || text.includes("boing")) {
+        triggerAction("jump", "chat");
+      } else if (text.includes("roll") || text.includes("spin")) {
+        triggerAction("roll", "chat");
+      } else if (text.includes("sleep") || text.includes("nap") || text.includes("tired")) {
+        triggerAction("sleep", "chat");
+      } else if (text.includes("wave") || text.includes("hello") || text.includes("hi")) {
+        triggerAction("wave", "chat");
+      } else if (petState !== "sleep") {
+        setPetState("happy", 900);
+      }
+
+      // Keep the chat interaction meow-only in Mochi's speech bubble.
+      setTimeout(() => {
+        say(catReply);
+      }, 50);
+    }
+
+    function handleChatSubmit(event) {
+      event.preventDefault();
+
+      const userText = chatInput.value.trim();
+      if (!userText) return;
+
+      addChatMessage("user", userText);
+      chatInput.value = "";
+
+      const catReply = makeMeowReply(userText);
+
+      setTimeout(() => {
+        addChatMessage("cat", catReply);
+        runChatSideEffect(userText, catReply);
+      }, 350);
+    }
+
     function setPetState(state, duration = 1200) {
       clearTimeout(stateTimer);
       petState = state;
@@ -925,6 +1258,314 @@
     function totalExamples() {
       return ACTIONS.reduce((sum, action) => sum + (learnedExamples[action]?.length || 0), 0);
     }
+
+    // =============================================================
+// Mochi Vision: teachable object recognition with MobileNet + kNN
+// =============================================================
+
+function getVisionThreshold() {
+  return Number(visionThresholdSlider.value) / 100;
+}
+
+function updateVisionThresholdUI() {
+  visionThresholdValue.textContent = getVisionThreshold().toFixed(2);
+}
+
+function getSelectedVisionLabel() {
+  const custom = customVisionLabel.value.trim().toLowerCase().replace(/\s+/g, "_");
+  return custom || visionLabelSelect.value;
+}
+
+function getVisionExampleCountsFromClassifier() {
+  if (!visionClassifier) return {};
+  try {
+    return visionClassifier.getClassExampleCount();
+  } catch {
+    return {};
+  }
+}
+
+function updateVisionExampleCounts() {
+  visionExampleCounts.innerHTML = "";
+
+  const counts = getVisionExampleCountsFromClassifier();
+  const labels = Object.keys(counts).sort();
+
+  if (labels.length === 0) {
+    const pill = document.createElement("span");
+    pill.className = "pill";
+    pill.textContent = "no object examples yet";
+    visionExampleCounts.appendChild(pill);
+    return;
+  }
+
+  labels.forEach(label => {
+    const pill = document.createElement("span");
+    pill.className = "pill";
+    pill.textContent = `${label}: ${counts[label]}`;
+    visionExampleCounts.appendChild(pill);
+  });
+}
+
+function drawVisionPreview() {
+  if (!video || video.readyState < 2) return;
+
+  visionCtx.save();
+  visionCtx.clearRect(0, 0, visionCanvas.width, visionCanvas.height);
+
+  // Mirror preview so it matches the camera panel.
+  visionCtx.translate(visionCanvas.width, 0);
+  visionCtx.scale(-1, 1);
+  visionCtx.drawImage(video, 0, 0, visionCanvas.width, visionCanvas.height);
+  visionCtx.restore();
+
+  // Pixel-style center box. This encourages the user to hold objects centered.
+  visionCtx.strokeStyle = "#ffc1e1";
+  visionCtx.lineWidth = 4;
+  visionCtx.strokeRect(82, 42, 156, 156);
+
+  visionCtx.fillStyle = "rgba(255, 248, 251, 0.92)";
+  visionCtx.fillRect(10, 10, 160, 24);
+  visionCtx.strokeStyle = "#251747";
+  visionCtx.lineWidth = 2;
+  visionCtx.strokeRect(10, 10, 160, 24);
+
+  visionCtx.fillStyle = "#251747";
+  visionCtx.font = "12px Courier New";
+  visionCtx.fillText("hold object here", 18, 27);
+}
+
+function serializeVisionDataset() {
+  if (!visionClassifier) return null;
+
+  const dataset = visionClassifier.getClassifierDataset();
+  const serialized = {};
+
+  Object.keys(dataset).forEach(label => {
+    const tensor = dataset[label];
+    serialized[label] = {
+      shape: tensor.shape,
+      data: Array.from(tensor.dataSync())
+    };
+  });
+
+  return serialized;
+}
+
+function saveVisionDataset() {
+  const serialized = serializeVisionDataset();
+  if (!serialized) return;
+  saveJSON(VISION_STORAGE_KEY, serialized);
+}
+
+function loadVisionDatasetIntoClassifier() {
+  if (!visionClassifier || !window.tf) return;
+
+  const saved = loadJSON(VISION_STORAGE_KEY, null);
+  if (!saved) return;
+
+  const dataset = {};
+  Object.keys(saved).forEach(label => {
+    dataset[label] = tf.tensor(saved[label].data, saved[label].shape);
+  });
+
+  visionClassifier.setClassifierDataset(dataset);
+  updateVisionExampleCounts();
+}
+
+async function loadVisionModel() {
+  if (!window.tf || !window.mobilenet || !window.knnClassifier) {
+    visionStatus.textContent = "TensorFlow.js, MobileNet, or kNN classifier did not load. Check internet/CDN access.";
+    return;
+  }
+
+  if (visionLoaded) {
+    visionStatus.textContent = "Mochi Vision is already loaded.";
+    return;
+  }
+
+  try {
+    visionStatus.textContent = "Loading MobileNet feature extractor...";
+    visionLog.textContent = "Loading model. This may take a few seconds the first time.";
+
+    visionClassifier = knnClassifier.create();
+
+    // alpha 0.50 is smaller/faster than full MobileNet and better for browser demos.
+    visionModel = await mobilenet.load({
+      version: 2,
+      alpha: 0.50
+    });
+
+    visionLoaded = true;
+    visionRunning = true;
+
+    loadVisionDatasetIntoClassifier();
+    updateVisionExampleCounts();
+
+    visionStatus.textContent = "Mochi Vision loaded. Capture object examples or classify live objects.";
+    visionLog.textContent = "Hold an object in the pink box, choose a label, then click Capture Example.";
+    say("Mochi Vision is awake. Show me something!");
+
+  } catch (err) {
+    console.error(err);
+    visionStatus.textContent = "Failed to load Mochi Vision model.";
+    visionLog.textContent = "Open the console for details. Make sure you are online.";
+  }
+}
+
+async function captureVisionExample() {
+  if (!visionLoaded || !visionModel || !visionClassifier) {
+    visionLog.textContent = "Load the vision model first.";
+    return;
+  }
+
+  if (!video || video.readyState < 2) {
+    visionLog.textContent = "Start the camera first, then capture an object example.";
+    return;
+  }
+
+  const label = getSelectedVisionLabel();
+
+  try {
+    const activation = visionModel.infer(video, true);
+    visionClassifier.addExample(activation, label);
+    activation.dispose();
+
+    saveVisionDataset();
+    updateVisionExampleCounts();
+
+    stats.xp = clamp(stats.xp + 3);
+    stats.trust = clamp(stats.trust + 1);
+    updateStats();
+
+    spawnParticles("brain", 5);
+    visionLog.textContent = `Saved object example for "${label}". Capture 3–5 examples from different angles.`;
+    say(`Mochi learned what "${label}" looks like. Meow!`);
+
+  } catch (err) {
+    console.error(err);
+    visionLog.textContent = "Could not capture object example. Try again with the object clearly visible.";
+  }
+}
+
+async function classifyVisionFrame() {
+  if (!visionLoaded || !visionRunning || !visionModel || !visionClassifier) return;
+  if (!video || video.readyState < 2) return;
+
+  const counts = getVisionExampleCountsFromClassifier();
+  if (Object.keys(counts).length === 0) {
+    visionStatus.textContent = "Vision model loaded. No object examples yet.";
+    return;
+  }
+
+  try {
+    const activation = visionModel.infer(video, true);
+    const result = await visionClassifier.predictClass(activation, 3);
+    activation.dispose();
+
+    const label = result.label;
+    const confidence = result.confidences[label] || 0;
+
+    visionLastPrediction = {
+      label,
+      confidence,
+      confidences: result.confidences,
+      time: performance.now()
+    };
+
+    renderVisionPrediction(visionLastPrediction);
+
+    if (confidence >= getVisionThreshold()) {
+      maybeTriggerVisionReaction(label, confidence);
+    }
+
+  } catch (err) {
+    console.warn("Vision classification failed", err);
+  }
+}
+
+function renderVisionPrediction(pred) {
+  if (!pred) return;
+
+  const confPct = Math.round(pred.confidence * 100);
+  const labels = Object.entries(pred.confidences || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([label, score]) => `${label}: ${Math.round(score * 100)}%`)
+    .join(" | ");
+
+  visionStatus.textContent = `Object: ${pred.label} | confidence ${confPct}%`;
+  visionLog.textContent = labels || "Looking for learned objects...";
+}
+
+function maybeTriggerVisionReaction(label, confidence) {
+  const now = performance.now();
+
+  // Cooldown so Mochi does not react every frame.
+  if (now - visionLastTriggerAt < 4500) return;
+  visionLastTriggerAt = now;
+
+  const confText = `${Math.round(confidence * 100)}%`;
+
+  if (label.includes("food") || label.includes("snack") || label.includes("treat") || label.includes("fish")) {
+    setPetState("ask_food", 1800);
+    stats.happiness = clamp(stats.happiness + 3);
+    stats.boredom = clamp(stats.boredom - 3);
+    say(`Mochi sees food (${confText}). Try pinch-dragging it to feed me!`);
+    spawnParticles("food", 5);
+  } else if (label.includes("toy") || label.includes("ball") || label.includes("play")) {
+    setPetState("ask_play", 1800);
+    stats.happiness = clamp(stats.happiness + 5);
+    stats.boredom = clamp(stats.boredom - 8);
+    say(`Mochi sees a toy (${confText}). Let's play!`);
+    spawnParticles("sparkle", 8);
+  } else if (label.includes("bed") || label.includes("blanket") || label.includes("pillow")) {
+    if (stats.energy < 70) {
+      triggerAction("sleep", "vision", confidence);
+    } else {
+      setPetState("happy", 1200);
+      say(`Mochi sees something cozy (${confText}).`);
+    }
+  } else if (label.includes("brush") || label.includes("comb")) {
+    triggerAction("pet", "vision", confidence);
+    say(`Mochi sees a brush (${confText}). Grooming time!`);
+  } else if (label.includes("person") || label.includes("face") || label.includes("user")) {
+    setPetState("happy", 1200);
+    stats.happiness = clamp(stats.happiness + 4);
+    stats.trust = clamp(stats.trust + 2);
+    say(`Mochi sees you (${confText}). Meow!`);
+    spawnParticles("heart", 6);
+  } else if (label.includes("unknown")) {
+    setPetState("confused", 1000);
+    say(`Mochi sees something unknown (${confText}). Teach me what it is!`);
+    spawnParticles("confuse", 5);
+  } else {
+    setPetState("confused", 900);
+    say(`Mochi thinks this is "${label}" (${confText}). What should I do with it?`);
+  }
+
+  updateStats();
+}
+
+function clearVisionDataset() {
+  if (!confirm("Clear all Mochi Vision object examples?")) return;
+
+  if (visionClassifier) {
+    visionClassifier.clearAllClasses();
+  }
+
+  localStorage.removeItem(VISION_STORAGE_KEY);
+  updateVisionExampleCounts();
+
+  visionStatus.textContent = "Cleared all object examples.";
+  visionLog.textContent = "Mochi forgot the learned objects. Capture new examples to teach again.";
+  say("Mochi forgot the object labels. Teach me again!");
+}
+
+function updateVisionPreviewLoop() {
+  drawVisionPreview();
+  requestAnimationFrame(updateVisionPreviewLoop);
+}
 
     // =============================================================
     // Pet actions + reward feedback for bandit brain
@@ -1865,16 +2506,27 @@
     }
 
     document.getElementById("startCameraBtn").addEventListener("click", startCamera);
-    document.getElementById("stopCameraBtn").addEventListener("click", stopCamera);
+document.getElementById("stopCameraBtn").addEventListener("click", stopCamera);
 
-    // =============================================================
-    // Initial render
-    // =============================================================
-    updateStats();
-    updateExampleCounts();
-    updateThresholdUI();
-    renderModelStatus(null);
-    updateBrainStatus("ready");
+loadVisionBtn.addEventListener("click", loadVisionModel);
+captureVisionBtn.addEventListener("click", captureVisionExample);
+clearVisionBtn.addEventListener("click", clearVisionDataset);
+visionThresholdSlider.addEventListener("input", updateVisionThresholdUI);
+
+// Draw the second camera preview in the Mochi Vision panel.
+requestAnimationFrame(updateVisionPreviewLoop);
+
+// Run object classification every 1.25 seconds.
+setInterval(classifyVisionFrame, 1250);
+
+updateStats();
+updateThresholdUI();
+updateExampleCounts();
+renderModelStatus(null);
+updateBrainStatus("ready");
+
+updateVisionThresholdUI();
+updateVisionExampleCounts();
   </script>
 </body>
 </html>
