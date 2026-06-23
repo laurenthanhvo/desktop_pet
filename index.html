@@ -10,6 +10,10 @@
     It uses MediaPipe's pretrained hand-tracking model through CDN scripts.
     The ML layer below is local-only: few-shot gesture examples are stored in localStorage.
   -->
+  <!-- MediaPipe Hands for webcam hand tracking -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
   <!-- TensorFlow.js + MobileNet + kNN classifier for teachable object recognition -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1"></script>
