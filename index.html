@@ -94,11 +94,16 @@
 
     .scene {
       position: relative;
-      height: 440px;
+      width: 100%;
+      aspect-ratio: 1520 / 880;
+      height: auto;
       overflow: hidden;
       image-rendering: pixelated;
       border-bottom: 3px solid var(--ink);
       background: linear-gradient(#c9f4ff, #fbffe8);
+      background-size: 100% 100%;
+      background-position: center;
+      background-repeat: no-repeat;
     }
 
     .scene::before {
@@ -671,15 +676,88 @@
     @media (max-width: 980px) {
       .app { grid-template-columns: 1fr; }
       .left-column { width: 100%; }
-      .scene { height: 390px; }
+      .scene {
+        height: auto;
+        aspect-ratio: 1520 / 880;
+      }
       .stats { grid-template-columns: repeat(3, 1fr); }
     }
 
     @media (max-width: 560px) {
       body { padding: 12px; }
-      .scene { height: 350px; }
+      .scene {
+        height: auto;
+        aspect-ratio: 1520 / 880;
+      }
       .stats { grid-template-columns: repeat(2, 1fr); }
     }
+
+    .scene[data-bg="meadow"] {
+      background-image: url("assets/backgrounds/meadow.png");
+    }
+
+    .scene[data-bg="desert"] {
+      background-image: url("assets/backgrounds/desert.png");
+    }
+
+    .scene[data-bg="forest"] {
+      background-image: url("assets/backgrounds/forest.png");
+    }
+
+    .scene[data-bg="park"] {
+      background-image: url("assets/backgrounds/park.png");
+    }
+
+    .scene[data-bg="farm"] {
+      background-image: url("assets/backgrounds/farm.png");
+    }
+
+    .scene[data-bg="bath"] {
+      background-image: url("assets/backgrounds/bath.png");
+    }
+
+    .scene[data-bg="waterfall"] {
+      background-image: url("assets/backgrounds/waterfall.png");
+    }
+
+    .scene[data-bg="sunset"] {
+      background-image: url("assets/backgrounds/sunset.png");
+    }
+
+    .scene::before {
+      display: none;
+    }
+
+    /* FINAL background image override */
+.scene {
+  width: 100% !important;
+  aspect-ratio: 1520 / 880 !important;
+  height: auto !important;
+
+  background-size: 100% 100% !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+
+  overflow: hidden;
+}
+
+/* Turn off the old decorative overlay */
+.scene::before {
+  display: none !important;
+}
+
+.scene {
+  width: 100% !important;
+  aspect-ratio: 1520 / 880 !important;
+  height: auto !important;
+  background-size: 100% 100% !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+}
+
+.scene {
+  aspect-ratio: 2048 / 1185 !important;
+}
   </style>
 </head>
 
@@ -963,7 +1041,16 @@
     // Global state
     // =============================================================
     const ACTIONS = ["jump", "roll", "wave", "feed", "pet", "sleep"];
-    const backgrounds = ["meadow", "desert", "forest", "sunset", "hills", "bath"];
+    const backgrounds = [
+  "meadow",
+  "desert",
+  "forest",
+  "park",
+  "farm",
+  "bath",
+  "waterfall",
+  "sunset"
+];
     let bgIndex = 0;
 
     let petState = "idle";
